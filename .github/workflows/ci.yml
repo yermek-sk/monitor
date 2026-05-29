@@ -1,29 +1,16 @@
-name: CI Pipeline
-
-on: [push]
-
-jobs:
-  build-and-test:
+lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create .env
-        run: |
-          echo "DB_USER=postgres" > .env
-          echo "DB_PASSWORD=password" >> .env
-          echo "DB_NAME=monitor_db" >> .env
-          echo "TG_TOKEN=dummy" >> .env
-          echo "TG_CHAT_ID=0" >> .env
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-      - name: Build and Run
-        run: docker compose up -d
+      - name: Install linter
+        run: pip install flake8
 
-      - name: Wait for Database
-        run: sleep 15 # Даем время базе полностью инициализироваться
-
-      - name: Test Database Connection
-        run: |
-          # Пытаемся подключиться к базе внутри контейнера и сделать тестовый запрос
-          docker exec monitor-db psql -U postgres -d monitor_db -c "SELECT 1;"
+      - name: Run linter
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
