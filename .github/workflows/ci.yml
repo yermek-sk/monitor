@@ -3,11 +3,27 @@ name: CI Pipeline
 on: [push]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build Docker images
-        run: docker compose build
+      - name: Create .env
+        run: |
+          echo "DB_USER=postgres" > .env
+          echo "DB_PASSWORD=password" >> .env
+          echo "DB_NAME=monitor_db" >> .env
+          echo "TG_TOKEN=dummy" >> .env
+          echo "TG_CHAT_ID=0" >> .env
+
+      - name: Build and Run
+        run: docker compose up -d
+
+      - name: Wait for Database
+        run: sleep 15 # Даем время базе полностью инициализироваться
+
+      - name: Test Database Connection
+        run: |
+          # Пытаемся подключиться к базе внутри контейнера и сделать тестовый запрос
+          docker exec monitor-db psql -U postgres -d monitor_db -c "SELECT 1;"
