@@ -36,17 +36,25 @@ jobs:
           echo "TG_TOKEN=dummy" >> .env
           echo "TG_CHAT_ID=0" >> .env
 
-      - name: Build and Run Database
-        run: docker compose up -d monitor-db
-
-      - name: Wait for Database
-        run: sleep 20
-
-      - name: Run Application
+      - name: Build and Run
         run: docker compose up -d
+
+      - name: Wait for Database to be healthy
+        run: |
+          echo "Waiting for database to be healthy..."
+          for i in {1..20}; do
+            # Проверяем статус здоровья контейнера monitor-db
+            STATUS=$(docker inspect -f '{{.State.Health.Status}}' monitor-db 2>/dev/null || echo "not-found")
+            if [ "$STATUS" == "healthy" ]; then
+              echo "Database is healthy!"
+              exit 0
+            fi
+            echo "Current status: $STATUS. Waiting..."
+            sleep 5
+          done
+          echo "Database failed to become healthy!"
+          exit 1
 
       - name: Test Database Connection
         run: |
-          # Ждем еще немного для надежности и делаем запрос
-          sleep 5
           docker exec monitor-db psql -U postgres -d monitor_db -c "SELECT 1;"
